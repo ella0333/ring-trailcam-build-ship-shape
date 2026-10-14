@@ -18,7 +18,7 @@ You can run it two ways: as a simulation with the Ring Developer Playground, whi
 python start.py
 ```
 
-The first run installs what it needs, which takes a few minutes. The dashboard then opens at http://localhost:8000 and asks how you want to use it.
+The first run installs what it needs, which takes a few minutes. The dashboard then opens at http://localhost:8000 with configuration settings.
 
 ```
 python stop.py
