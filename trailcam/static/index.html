@@ -64,7 +64,15 @@ textarea, input { width: 100%; background: var(--bg); color: var(--text); border
 .sci { color: var(--muted); font-style: italic; font-size: 13px; }
 .meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
 .conf { color: var(--accent); font-weight: 600; }
-.second { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.matches { margin-top: 10px; display: grid; gap: 6px; }
+.matches .cap-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+.match { display: grid; grid-template-columns: minmax(0, 1fr) 42px; gap: 8px; align-items: center; font-size: 12px; }
+.match .name { text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.match .bar { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.match .bar i { display: block; height: 100%; background: var(--muted); }
+.match.top .bar i { background: var(--accent); }
+.match .pct { text-align: right; color: var(--muted); font-weight: 600; }
+.match.top .pct { color: var(--accent); }
 .ringtag { display: inline-block; margin-top: 6px; font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
 .fb { display: flex; gap: 6px; margin-top: 10px; }
 .fb button { padding: 4px 10px; font-size: 12px; }
@@ -121,6 +129,7 @@ dialog .body { padding: 16px 20px 20px; }
     <div class="species" id="vSpecies"></div>
     <div class="sci" id="vSci"></div>
     <div class="meta" id="vMeta"></div>
+    <div id="vMatch" style="max-width:360px"></div>
     <p style="text-align:right;margin:14px 0 0"><button onclick="viewer.close()">Close</button></p>
   </div>
 </dialog>
@@ -275,6 +284,15 @@ function renderStatus(s) {
   else { st.textContent = "My Ring camera: setup not finished"; st.className = "chip warn"; }
 }
 
+// SpeciesNet's match for the sighting, and its next closest match, as labeled confidence bars.
+function matches(x) {
+  const row = (name, score, top) => `<div class="match${top ? " top" : ""}">
+    <span class="name">${esc(name)}</span><span class="pct">${Math.round(score * 100)}%</span>
+    <span class="bar"><i style="width:${Math.round(score * 100)}%"></i></span></div>`;
+  return `<div class="matches"><span class="cap-title">Species confidence</span>
+    ${row(x.label, x.score, true)}${x.second ? row(x.second, x.second_score, false) : ""}</div>`;
+}
+
 function render(s) {
   S = s;
   renderStatus(s);
@@ -293,8 +311,8 @@ function render(s) {
       <div class="body">
         <div class="species">${esc(x.label)}</div>
         <div class="sci">${esc(x.scientific)}</div>
-        <div class="meta"><span>${when(x.ts_ms)} · ${esc(x.device_name)}</span><span class="conf">${Math.round(x.score * 100)}%</span></div>
-        ${x.second ? `<div class="second">Second answer: <span class="cap">${esc(x.second)}</span> ${Math.round(x.second_score * 100)}%</div>` : ""}
+        <div class="meta"><span>${when(x.ts_ms)} · ${esc(x.device_name)}</span></div>
+        ${matches(x)}
         ${x.ring_subtype && x.media !== "simulated" ? `<span class="ringtag">Ring detected: ${esc(x.ring_subtype.replace("_", " "))}</span>` : ""}
         <div class="fb">
           <button data-fb="confirmed" class="${x.feedback === "confirmed" ? "on" : ""}">Correct</button>
@@ -330,7 +348,8 @@ $("feed").addEventListener("click", async ev => {
   $("vSpecies").textContent = x.label;
   $("vSci").textContent = x.scientific;
   const source = {clip: "clip from Ring", snapshot: "snapshot from Ring", simulated: "simulated clip for a Playground motion event"}[x.media] || "";
-  $("vMeta").innerHTML = `<span>${when(x.ts_ms)} · ${esc(x.device_name)} · ${source}</span><span class="conf">${Math.round(x.score * 100)}% confident${x.second ? ` · second answer: ${esc(x.second)} ${Math.round(x.second_score * 100)}%` : ""}</span>`;
+  $("vMeta").innerHTML = `<span>${when(x.ts_ms)} · ${esc(x.device_name)} · ${source}</span>`;
+  $("vMatch").innerHTML = matches(x);
   $("viewer").showModal();
 });
 
