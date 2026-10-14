@@ -55,7 +55,9 @@ class PlaygroundPoller:
                 status = self.pipeline.intake(
                     request_id=e["id"], event_id=e["id"], device_id=device_id, account_id="",
                     ts_ms=start, sub_type=button, component_id=None, source="playground",
-                    note=f"Ring tags: {', '.join(tags) or 'none'}",
+                    # Ring's tags describe the Playground's own video. For Motion that video is
+                    # replaced by a pool clip, and SpeciesNet decides what is in the clip.
+                    note=f"Ring tags on the Playground video: {', '.join(tags) or 'none'}",
                 )
                 log.info("Playground %s event %s (Ring tags: %s): %s", button, e["id"], tags, status)
 

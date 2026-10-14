@@ -183,7 +183,9 @@ class Pipeline:
                 request_id=job.request_id, device_id=job.device_id, device_name=self.device_name(job.device_id),
                 ts_ms=job.ts_ms, label=result.label, scientific=result.scientific, score=result.score,
                 clip=clip_rel, thumb=thumb_rel, first_visit=int(first), country=country, state=state or "",
-                media=media, source=job.source, ring_subtype=self.ring_subtype(job),
+                # A swapped clip isn't the video Ring tagged, so Ring's tag doesn't describe it.
+                media=media, source=job.source,
+                ring_subtype=None if media == "simulated" else self.ring_subtype(job),
                 second=result.second, second_score=result.second_score,
             )
             store.set_event(job.request_id, "sighting", f"{result.label} ({result.score:.0%})")
