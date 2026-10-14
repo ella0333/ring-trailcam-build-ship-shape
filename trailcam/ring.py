@@ -163,8 +163,7 @@ class RingClient:
     def __init__(self, base: str | None = None, token_source: TokenStore | None = None) -> None:
         self.base = (base or settings.api_base).rstrip("/")
         self.tokens = token_source or tokens
-        # httpx drops the Authorization header when a redirect leaves the origin, which
-        # is what we want for Ring's pre-signed media URLs.
+        # httpx drops the Authorization header on cross-origin redirects (Ring's pre-signed media URLs).
         self.http = httpx.Client(timeout=60, follow_redirects=True)
         self._location_cache: dict[str, dict] = {}
 
@@ -228,22 +227,23 @@ class RingClient:
         params = {"event_types": event_types} if event_types else None
         return self._json("GET", f"/v1/history/devices/{device_id}/events", params=params).get("data", [])
 
-    # Event History's documented subtype filters, plus the webhook's package_delivery value.
-    # Most specific first: an event can match more than one, and the Playground tags its
-    # synthetic events "human" alongside the real one.
+    # Most specific first.
     SUBTYPES = ("package_delivery", "vehicle", "animal", "human", "other_motion")
 
     def motion_tags(self, device_id: str, event_id: str) -> list[str]:
-        """Every subtype Ring gives this event. History withholds the subtype, so it can only
-        be read by repeating the query once per event_types filter."""
+        """The subtypes Ring gives this event, read through Event History's event_types filters.
+
+        A filter Ring doesn't apply returns every motion event, so a filter only counts when
+        its result is smaller than the unfiltered list."""
+        all_ids = {e["id"] for e in self.history(device_id, "motion")}
         tags = []
         for sub in self.SUBTYPES:
             try:
-                found = self.history(device_id, f"motion.{sub}")
-            except RingError as e:  # a filter Ring doesn't accept shouldn't stop the others
+                ids = {e["id"] for e in self.history(device_id, f"motion.{sub}")}
+            except RingError as e:
                 log.info("Event History filter motion.%s not accepted: %s", sub, e.status)
                 continue
-            if any(e.get("id") == event_id for e in found):
+            if event_id in ids and ids != all_ids:
                 tags.append(sub)
         return tags
 

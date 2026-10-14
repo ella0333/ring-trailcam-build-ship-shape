@@ -32,13 +32,10 @@ class Settings:
     default_country = _env("DEFAULT_COUNTRY", "US")
     default_state = _env("DEFAULT_STATE", "")
 
-    # Ring Developer Playground tokens are not tied to an app, so Ring has no webhook to send
-    # their events to. While one is set, the app polls Event History instead, as Ring
-    # documents in "API polling alternative".
+    # Playground events are read by polling Event History (Ring's "API polling alternative").
     poll_s = float(_env("POLL_S", "5"))
 
-    # Playground simulation: Motion events from the Playground use a random clip from this
-    # folder instead of the Playground's own video. The open source version has no folder.
+    # Clip pool for Playground Motion events. Not present in the open source version.
     motion_clips = ROOT / "simulation" / "motion-clips"
 
     data_dir = Path(_env("DATA_DIR", str(ROOT / "data")))

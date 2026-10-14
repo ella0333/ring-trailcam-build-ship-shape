@@ -29,11 +29,8 @@ THUMBS = settings.data_dir / "thumbs"
 CLIPS.mkdir(exist_ok=True)
 THUMBS.mkdir(exist_ok=True)
 
-# Ring's CV guidelines for a wildlife app: drop what Ring tagged as a person or a vehicle,
-# and send every other value, including ones Ring adds later, on to classification.
+# From Ring's CV guidelines for wildlife apps. Every other subtype is classified.
 SKIP_SUB_TYPES = {"human", "vehicle"}
-# Playground simulation: every Playground Motion event gets a random clip from the motion pool
-# instead of the Playground's own video. See poller.py for how Motion events are recognized.
 
 
 @dataclass
@@ -53,8 +50,7 @@ class Pipeline:
         self.classifier = Classifier()
         self.q: queue.Queue[Job] = queue.Queue()
         self._device_names: dict[str, str] = {}
-        # Several downloaders, because each one mostly waits on Ring; SpeciesNet itself
-        # runs one clip at a time behind the classifier's lock.
+        # Downloads run in parallel; SpeciesNet runs one clip at a time.
         for i in range(workers):
             threading.Thread(target=self._loop, name=f"pipeline-{i}", daemon=True).start()
 
@@ -107,7 +103,7 @@ class Pipeline:
             job = self.q.get()
             try:
                 self.process(job)
-            except Exception as e:  # keep the worker alive, record what went wrong
+            except Exception as e:
                 log.exception("job %s failed", job.request_id)
                 store.set_event(job.request_id, "error", str(e)[:300])
 
@@ -152,7 +148,7 @@ class Pipeline:
                 store.set_event(job.request_id, "working", "classifying clip")
                 result = self.classifier.classify_clip(clip_path, country, state, keep_dir=work)
             else:
-                # No recording to download. A snapshot at the event time is the next best thing.
+                # No recording available, fall back to a snapshot.
                 media = "snapshot"
                 try:
                     snap = self.ring.download_snapshot(job.device_id, job.ts_ms, job.component_id)
@@ -183,7 +179,6 @@ class Pipeline:
                 request_id=job.request_id, device_id=job.device_id, device_name=self.device_name(job.device_id),
                 ts_ms=job.ts_ms, label=result.label, scientific=result.scientific, score=result.score,
                 clip=clip_rel, thumb=thumb_rel, first_visit=int(first), country=country, state=state or "",
-                # A swapped clip isn't the video Ring tagged, so Ring's tag doesn't describe it.
                 media=media, source=job.source,
                 ring_subtype=None if media == "simulated" else self.ring_subtype(job),
                 second=result.second, second_score=result.second_score,

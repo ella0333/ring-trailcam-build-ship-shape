@@ -36,8 +36,7 @@ pipeline = Pipeline()
 poller = PlaygroundPoller(pipeline)
 
 
-# Through the Cloudflare tunnel, Ring only needs these. The dashboard, clips and settings
-# answer on this computer only. Tunnel requests carry cf-connecting-ip.
+# Paths reachable through the tunnel. Everything else is local only.
 PUBLIC_PATHS = ("/webhooks/ring", "/ring/token-exchange", "/ring/link")
 
 
@@ -90,7 +89,6 @@ async def ring_webhook(request: Request, x_signature: str | None = Header(defaul
         request_id=meta.get("request_id") or data.get("id"), event_id=data.get("id", ""),
         device_id=attrs.get("source", ""), account_id=meta.get("account_id", ""),
         ts_ms=int(attrs.get("timestamp") or time.time() * 1000),
-        # Ring's vocabulary is open ended: anything not on the skip list is processed.
         sub_type=attrs.get("sub_type") or "motion",
         component_id=components[0] if components else None, source="ring",
     )
@@ -197,14 +195,7 @@ def reset(request: Request):
     return {"ok": True}
 
 
-# ---------------------------------------------------------------- Ring account linking
-#
-# A real Ring camera connects through Ring's one-way account linking. Register these
-# in the Ring developer console (staging settings), using the public tunnel address:
-#   Token Exchange URL  {PUBLIC_URL}/ring/token-exchange
-#   Account Link URL    {PUBLIC_URL}/ring/link
-#   Webhook URL         {PUBLIC_URL}/webhooks/ring
-#   App Homepage URL    {PUBLIC_URL}/
+# ---------------------------------------------------------------- Ring account linking (one-way)
 
 
 def _tokens_file() -> dict:
@@ -308,8 +299,7 @@ def link_submit(nonce: str = Form(...), time: str = Form(...), email: str = Form
     def page(msg: str) -> str:
         return LINK_PAGE.format(message=msg, nonce=nonce, time=time)
 
-    # Ring requires a sign-in or create-account step before claiming a token. The first link
-    # creates the account; later links have to sign in with it.
+    # Ring requires a sign-in before a token is claimed. The first link creates the account.
     if not check_account(email, password):
         return page("Wrong email or password.")
     age = (_t.time() * 1000 - int(time)) / 1000
@@ -332,5 +322,4 @@ def link_submit(nonce: str = Form(...), time: str = Form(...), email: str = Form
     TOKENS_FILE.write_text(json.dumps(t, indent=1))
     tokens.set_camera(match["refresh_token"], match["access_token"], match.get("expires_in"),
                       match["account_id"])
-    # The person linking is at this computer, so send them back to the local dashboard.
     return RedirectResponse("http://localhost:8000/?linked=1", status_code=303)

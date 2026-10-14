@@ -42,7 +42,7 @@ class PlaygroundPoller:
             events = self.ring.history(device_id, "motion")
             ids = {e["id"] for e in events}
             if device_id not in self._seen:
-                # Events from before the app started are history, not new motion.
+                # Ignore events from before the app started.
                 self._seen[device_id] = ids
                 continue
             for e in reversed(events):  # oldest first
@@ -55,20 +55,13 @@ class PlaygroundPoller:
                 status = self.pipeline.intake(
                     request_id=e["id"], event_id=e["id"], device_id=device_id, account_id="",
                     ts_ms=start, sub_type=button, component_id=None, source="playground",
-                    # Ring's tags describe the Playground's own video. For Motion that video is
-                    # replaced by a pool clip, and SpeciesNet decides what is in the clip.
                     note=f"Ring tags on the Playground video: {', '.join(tags) or 'none'}",
                 )
                 log.info("Playground %s event %s (Ring tags: %s): %s", button, e["id"], tags, status)
 
 
 def playground_button(tags: list[str]) -> str:
-    """Which Playground button made the event, from every tag Ring gave it.
-
-    Package: Ring's package tag. It keeps package_delivery, so the pipeline uses the
-    Playground's own video. Vehicle: Ring's vehicle tag, so the event is skipped. Anything
-    else is the Motion button, whatever Ring tagged its synthetic video as, and becomes plain
-    motion so the pipeline swaps in a clip from the motion pool."""
+    """Package and Vehicle keep Ring's tag. Everything else is the Motion button."""
     if "package_delivery" in tags:
         return "package_delivery"
     if "vehicle" in tags:

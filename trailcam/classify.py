@@ -74,7 +74,6 @@ def sample_frames(clip: Path, out_dir: Path, n: int = FRAMES_PER_CLIP) -> list[P
     if total <= 0:
         cap.release()
         return paths
-    # Skip the very first and last frames, trigger cameras often have exposure flicker there.
     picks = sorted({int(total * (i + 0.5) / n) for i in range(n)})
     for idx in picks:
         cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
@@ -82,8 +81,7 @@ def sample_frames(clip: Path, out_dir: Path, n: int = FRAMES_PER_CLIP) -> list[P
         if not ok:
             continue
         p = out_dir / f"{clip.stem}_f{idx:05d}.jpg"
-        # imencode, not imwrite: yolov5 (pulled in by SpeciesNet) replaces cv2.imwrite with a
-        # two-argument version once the model loads.
+        # yolov5 (a SpeciesNet dependency) replaces cv2.imwrite, so encode and write directly.
         ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 92])
         if not ok:
             continue
@@ -102,7 +100,7 @@ class Classifier:
         self._lock = threading.RLock()
 
     def load(self):
-        # torch's model loader is not thread safe, so loading shares the inference lock.
+        # Loading isn't thread safe, so it shares the inference lock.
         with self._lock:
             if self._model is None:
                 from speciesnet import SpeciesNet
@@ -134,7 +132,7 @@ class Classifier:
                 result.saw_human = True
             if common in NOT_ANIMALS or not label:
                 continue
-            # A species-level answer beats a genus or family rollup from another frame.
+            # Prefer species-level answers over genus or family rollups.
             rank = (len(scientific.split()) == 2, score)
             if best is None or rank > best[0]:
                 animals = [d for d in pred.get("detections", []) if d.get("label") == "animal"]
