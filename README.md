@@ -12,9 +12,11 @@ You can run it two ways: as a simulation with the Ring Developer Playground, whi
 - A Ring developer account, from the [Ring developer console](https://developer.amazon.com/ring/console/apps).
 - For your own camera, also: a private app in the Ring developer console with the Cameras and Doorbells scope, a Ring camera in the US, and a Ring Protect plan or trial on that Ring account.
 
-## Start and stop
+## Quick start
 
 ```
+git clone https://github.com/ella0333/ring-trailcam-build-ship-shape.git
+cd ring-trailcam-build-ship-shape
 python start.py
 ```
 
