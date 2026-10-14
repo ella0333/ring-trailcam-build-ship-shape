@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ring Trail Cam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f130e; --panel: #171d15; --panel2: #1e261b; --line: #2c3628;
+  --text: #e9ecdf; --muted: #a2ab97; --accent: #8fd18a; --accent-ink: #0f130e;
+  --gold: #e9c46a; --warn: #e07a5f; --sim: #6fa8dc;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 Inter, system-ui, sans-serif; }
+a { color: var(--accent); }
+header { display: flex; align-items: center; gap: 14px; padding: 18px 24px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+h1 { font: 700 26px Fraunces, Georgia, serif; margin: 0; }
+h1 span { color: var(--accent); }
+h2 { font: 600 18px Fraunces, serif; margin: 0 0 12px; }
+.chip { font-size: 12px; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chip.live { border-color: var(--accent); color: var(--accent); }
+.chip.sim { border-color: var(--sim); color: var(--sim); }
+.chip.warn { border-color: var(--warn); color: var(--warn); }
+.spacer { flex: 1; }
+button { font: 600 13px Inter, sans-serif; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 4px; }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; padding: 24px; max-width: 1400px; margin: 0 auto; }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 16px; } header { padding: 14px 16px; } }
+.setup { background: var(--panel); border: 1px solid var(--sim); border-radius: 14px; padding: 20px 22px; margin-bottom: 24px; }
+.setup p { margin: 6px 0; color: var(--muted); }
+.setup ol { margin: 8px 0 14px; padding-left: 20px; color: var(--muted); }
+.setup li { margin: 4px 0; }
+.setup label { display: block; font-size: 13px; color: var(--muted); margin-top: 10px; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px; }
+@media (max-width: 600px) { .choices { grid-template-columns: 1fr; } }
+.choice { text-align: left; padding: 16px; border-radius: 12px; }
+.choice b { display: block; font: 600 16px Fraunces, serif; margin-bottom: 4px; }
+.choice span { color: var(--muted); font-weight: 400; }
+.addr { display: flex; gap: 8px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+.addr .name { width: 150px; font-size: 13px; color: var(--muted); }
+.addr code { flex: 1; min-width: 200px; font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; color: var(--accent); word-break: break-all; }
+textarea, input { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 9px; font: 13px ui-monospace, monospace; margin-top: 4px; }
+.row2 { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; margin-top: 8px; }
+.row2 textarea { flex: 1; min-width: 240px; margin: 0; }
+.msg { font-size: 13px; color: var(--muted); margin-top: 10px; white-space: pre-wrap; }
+.msg.ok { color: var(--accent); } .msg.err { color: var(--warn); }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+@media (max-width: 600px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.stat b { display: block; font: 700 28px Fraunces, serif; }
+.stat small { color: var(--muted); }
+.feed { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; cursor: pointer; }
+.card:hover { border-color: #45543f; }
+.card .img { position: relative; aspect-ratio: 16/9; background: #000; }
+.card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.badge { position: absolute; top: 10px; left: 10px; background: var(--gold); color: #2a2205; font: 700 11px Inter; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .5px; }
+.simtag { position: absolute; top: 10px; right: 10px; background: rgba(15,19,14,.8); color: var(--sim); font: 600 11px Inter; padding: 3px 8px; border-radius: 6px; }
+.card .body { padding: 12px 14px 14px; }
+.species { font: 600 18px Fraunces, serif; text-transform: capitalize; }
+.sci { color: var(--muted); font-style: italic; font-size: 13px; }
+.meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
+.conf { color: var(--accent); font-weight: 600; }
+.ringtag { display: inline-block; margin-top: 6px; font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+.fb { display: flex; gap: 6px; margin-top: 10px; }
+.fb button { padding: 4px 10px; font-size: 12px; }
+.fb button.on { border-color: var(--accent); color: var(--accent); }
+.fb button.on.no { border-color: var(--warn); color: var(--warn); }
+aside section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 20px; }
+.row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--line); gap: 8px; }
+.row:last-child { border-bottom: 0; }
+.cap { text-transform: capitalize; }
+.ev { font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.ev:last-child { border-bottom: 0; }
+.ev .st { font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+.st.sighting { color: var(--accent); } .st.skipped, .st.no_animal { color: var(--muted); }
+.st.working, .st.queued { color: var(--gold); } .st.error, .st.unavailable, .st.encrypted { color: var(--warn); }
+.d { color: var(--muted); }
+.empty { color: var(--muted); padding: 40px; text-align: center; border: 1px dashed var(--line); border-radius: 14px; }
+dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 14px; padding: 0; max-width: min(900px, 94vw); width: 100%; }
+dialog::backdrop { background: rgba(0,0,0,.7); }
+dialog video, dialog img { width: 100%; display: block; background: #000; }
+dialog .body { padding: 16px 20px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Ring <span>Trail Cam</span></h1>
+  <span id="status" class="chip">Loading</span>
+  <span class="spacer"></span>
+  <button id="replaceBtn" hidden>Replace token</button>
+  <button id="addrBtn" hidden>Ring console addresses</button>
+  <button id="modeBtn" class="link" hidden>Change mode</button>
+</header>
+
+<main>
+  <div>
+    <div id="setup"></div>
+    <div class="stats">
+      <div class="stat"><b id="sSightings">0</b><small>sightings</small></div>
+      <div class="stat"><b id="sSpecies">0</b><small>species</small></div>
+      <div class="stat"><b id="sSkipped">0</b><small>people and cars skipped by Ring</small></div>
+      <div class="stat"><b id="sEmpty">0</b><small>clips with no animal, deleted</small></div>
+    </div>
+    <h2>Field journal</h2>
+    <div id="feed" class="feed"></div>
+  </div>
+  <aside>
+    <section><h2>Species</h2><div id="species"></div></section>
+    <section><h2>Ring events</h2><div id="events"></div></section>
+  </aside>
+</main>
+
+<dialog id="viewer">
+  <div id="viewerMedia"></div>
+  <div class="body">
+    <div class="species" id="vSpecies"></div>
+    <div class="sci" id="vSci"></div>
+    <div class="meta" id="vMeta"></div>
+    <p style="text-align:right;margin:14px 0 0"><button onclick="viewer.close()">Close</button></p>
+  </div>
+</dialog>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const when = ms => new Date(ms).toLocaleString([], {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"});
+const PLAYGROUND = "https://developer.amazon.com/ring/console/playground";
+const CONSOLE = "https://developer.amazon.com/ring/console/apps";
+let S = null, shownSetup = null, forced = "";
+
+const post = (url, data) => fetch(url, {method: "POST", body: new URLSearchParams(data)});
+
+// ---------------------------------------------------------------- setup panels
+
+function chooseMode() {
+  return `<div class="setup"><h2>How do you want to use Ring Trail Cam?</h2>
+    <div class="choices">
+      <button class="choice" data-mode="simulation"><b>Simulation</b><span>Use the Ring Developer Playground. No Ring camera needed, only a Ring developer account.</span></button>
+      <button class="choice" data-mode="camera"><b>My Ring camera</b><span>Connect your own Ring camera. Needs a Ring developer account and a private app in the Ring developer console.</span></button>
+    </div></div>`;
+}
+
+function tokenPanel(expired) {
+  return `<div class="setup"><h2>${expired ? "Your Playground token expired. Paste a new one." : "Connect to the Ring Developer Playground"}</h2>
+    <ol>
+      <li>Open the Ring Developer Playground: <a href="${PLAYGROUND}" target="_blank" rel="noopener">${PLAYGROUND}</a></li>
+      <li>Sign in with your Ring developer account and click <b>Generate Token</b>.</li>
+      <li>Copy the token, paste it below and click Connect. It lasts about 30 minutes.</li>
+    </ol>
+    <div class="row2"><textarea id="tokenInput" rows="2" placeholder="Paste the Playground token here"></textarea>
+      <button class="primary" id="tokenBtn">Connect</button></div>
+    <div class="msg" id="setupMsg"></div></div>`;
+}
+
+function keysPanel() {
+  return `<div class="setup"><h2>Connect your Ring camera. Step 1 of 3: your app keys</h2>
+    <p>You need a private app in the <a href="${CONSOLE}" target="_blank" rel="noopener">Ring developer console</a> with the Cameras and Doorbells scope.
+    Ring shows its Client ID, Client Secret and HMAC Signature Key once, when the app is created, with a Download CSV button. If you no longer have them, delete the app in the console and create a new one.</p>
+    <label>Client ID<input id="kId" autocomplete="off"></label>
+    <label>Client Secret<input id="kSecret" type="password" autocomplete="off"></label>
+    <label>HMAC Signature Key<input id="kHmac" type="password" autocomplete="off"></label>
+    <div class="row2"><button class="primary" id="keysBtn">Save keys</button></div>
+    <div class="msg" id="setupMsg"></div></div>`;
+}
+
+function addresses(url) {
+  const rows = [
+    ["Account Link URL", url + "/ring/link"],
+    ["Default Redirect URL", url + "/ring/link/done"],
+    ["Token Exchange URL", url + "/ring/token-exchange"],
+    ["Webhook URL", url + "/webhooks/ring"],
+  ];
+  return rows.map(([n, v]) => `<div class="addr"><span class="name">${n}</span><code>${esc(v)}</code>
+    <button data-copy="${esc(v)}">Copy</button></div>`).join("");
+}
+
+function linkPanel(c) {
+  let body;
+  if (c.tunnel === "on" && c.public_url) {
+    body = `<p>In the <a href="${CONSOLE}" target="_blank" rel="noopener">Ring developer console</a>, open your app, then Account linking, then the Staging settings tab. Paste each address into the field with the same name and click Save staging settings.</p>
+      ${addresses(c.public_url)}
+      <h2 style="margin-top:18px">Step 3 of 3: link your Ring account</h2>
+      <p>On your app's page in the console, open <b>Connect</b> and choose <b>Log in with Ring</b>. Sign in with the Ring account that has your camera, allow access and pick your cameras.
+      Ring then opens a Ring Trail Cam page where you create an account. After that, this page shows "Ring account linked".</p>
+      <p>Your Ring account needs a Ring Protect plan or trial, and the camera must be in the US.</p>`;
+  } else if (c.tunnel === "error") {
+    body = `<p class="msg err">${esc(c.tunnel_error)}</p>`;
+  } else {
+    body = `<p>Starting a secure tunnel so Ring can reach this computer. This takes a few seconds.</p>`;
+  }
+  return `<div class="setup"><h2>Step 2 of 3: give Ring the app's addresses</h2>${body}
+    <p><button class="link" id="rekeyBtn">Enter different app keys</button></p></div>`;
+}
+
+function addrPanel(c) {
+  return `<div class="setup"><h2>Ring console addresses</h2>
+    <p>The tunnel address changes every time Ring Trail Cam starts. If it changed, update the four fields in your app's Account linking, Staging settings tab, in the <a href="${CONSOLE}" target="_blank" rel="noopener">Ring developer console</a>.</p>
+    ${c.public_url ? addresses(c.public_url) : "<p>Starting the tunnel...</p>"}
+    <p><button class="link" id="closeAddr">Close</button></p></div>`;
+}
+
+function setupFor(s) {
+  if (forced) return forced === "addr" ? "addr:" + s.camera.public_url : forced;
+  if (!s.mode) return "choose";
+  if (s.mode === "simulation") return s.ring.connected ? "" : (s.ring.expired ? "expired" : "token");
+  if (!s.camera.keys_saved) return "keys";
+  if (!s.ring.connected) return "link:" + s.camera.tunnel + ":" + s.camera.public_url;
+  return "";
+}
+
+function renderSetup(s) {
+  const key = setupFor(s);
+  if (key === shownSetup) return;  // keep whatever the person is typing
+  if (key === "" && shownSetup === "connected") return;  // keep the "Connected" message
+  shownSetup = key;
+  const c = s.camera;
+  $("setup").innerHTML = key === "choose" ? chooseMode()
+    : key === "token" ? tokenPanel(false)
+    : key === "expired" ? tokenPanel(true)
+    : key === "keys" ? keysPanel()
+    : key.startsWith("link:") ? linkPanel(c)
+    : key.startsWith("addr:") ? addrPanel(c)
+    : "";
+}
+
+$("setup").addEventListener("click", async ev => {
+  const t = ev.target.closest("button"); if (!t) return;
+  if (t.dataset.mode) { await post("/api/mode", {mode: t.dataset.mode}); forced = ""; return poll(); }
+  if (t.dataset.copy) { navigator.clipboard.writeText(t.dataset.copy); t.textContent = "Copied"; return; }
+  if (t.id === "tokenBtn") {
+    const token = $("tokenInput").value.trim(); if (!token) return;
+    $("setupMsg").className = "msg"; $("setupMsg").textContent = "Checking the token with Ring...";
+    const j = await (await post("/api/token", {token})).json();
+    if (j.ok) {
+      forced = ""; shownSetup = "connected";
+      $("setup").innerHTML = `<div class="msg ok" style="margin:0 0 16px">Connected to Ring. Device: ${esc(j.devices.join(", ") || "none")}. Now press Package, Vehicle or Motion in the Playground.</div>`;
+    } else { $("setupMsg").className = "msg err"; $("setupMsg").textContent = j.error || "Ring did not accept this token."; }
+    return poll();
+  }
+  if (t.id === "keysBtn") {
+    const data = {client_id: $("kId").value, client_secret: $("kSecret").value, hmac_key: $("kHmac").value};
+    if (!data.client_id.trim() || !data.client_secret.trim() || !data.hmac_key.trim()) {
+      $("setupMsg").className = "msg err"; $("setupMsg").textContent = "All three keys are needed."; return;
+    }
+    await post("/api/camera", data); forced = ""; return poll();
+  }
+  if (t.id === "rekeyBtn") { forced = "keys"; return render(S); }
+  if (t.id === "closeAddr") { forced = ""; return render(S); }
+});
+
+$("modeBtn").onclick = () => { forced = "choose"; render(S); };
+$("replaceBtn").onclick = () => { forced = "token"; render(S); };
+$("addrBtn").onclick = () => { forced = "addr"; render(S); };
+
+// ---------------------------------------------------------------- status and feed
+
+function renderStatus(s) {
+  const st = $("status"), now = Date.now() / 1000;
+  $("modeBtn").hidden = !s.simulation_available || !s.mode;
+  $("replaceBtn").hidden = !(s.mode === "simulation" && s.ring.connected);
+  $("addrBtn").hidden = !(s.mode === "camera" && s.ring.connected);
+  if (!s.mode) { st.textContent = "Choose a mode"; st.className = "chip"; }
+  else if (s.mode === "simulation") {
+    if (s.ring.connected) {
+      const mins = s.ring.expires_at ? Math.max(1, Math.round((s.ring.expires_at - now) / 60)) : null;
+      st.textContent = "Simulation: Ring Developer Playground" + (mins ? ` · token expires in ${mins} min` : "");
+      st.className = "chip sim";
+    } else { st.textContent = s.ring.expired ? "Playground token expired" : "Simulation: no token yet"; st.className = "chip warn"; }
+  } else if (s.ring.connected) { st.textContent = "My Ring camera: account linked"; st.className = "chip live"; }
+  else { st.textContent = "My Ring camera: setup not finished"; st.className = "chip warn"; }
+}
+
+function render(s) {
+  S = s;
+  renderStatus(s);
+  renderSetup(s);
+  const tot = s.totals;
+  $("sSightings").textContent = s.sightings.length;
+  $("sSpecies").textContent = s.species.length;
+  $("sSkipped").textContent = tot.skipped || 0;
+  $("sEmpty").textContent = tot.no_animal || 0;
+
+  $("feed").innerHTML = s.sightings.length ? s.sightings.map((x, i) => `
+    <div class="card" data-i="${i}">
+      <div class="img"><img src="/media/${esc(x.thumb)}" alt="${esc(x.label)}" loading="lazy">
+        ${x.first_visit ? '<span class="badge">First visit</span>' : ""}
+        ${x.media === "simulated" ? '<span class="simtag">Simulated clip</span>' : ""}</div>
+      <div class="body">
+        <div class="species">${esc(x.label)}</div>
+        <div class="sci">${esc(x.scientific)}</div>
+        <div class="meta"><span>${when(x.ts_ms)} · ${esc(x.device_name)}</span><span class="conf">${Math.round(x.score * 100)}%</span></div>
+        ${x.ring_subtype ? `<span class="ringtag">Ring detected: ${esc(x.ring_subtype.replace("_", " "))}</span>` : ""}
+        <div class="fb">
+          <button data-fb="confirmed" class="${x.feedback === "confirmed" ? "on" : ""}">Correct</button>
+          <button data-fb="rejected" class="${x.feedback === "rejected" ? "on no" : ""}">Wrong</button>
+        </div>
+      </div>
+    </div>`).join("") : '<div class="empty">No visitors yet. Animals Ring sees will show up here.</div>';
+
+  $("species").innerHTML = s.species.length ? s.species.map(x => `
+    <div class="row"><span class="cap">${esc(x.label)}</span><b>${x.visits}</b></div>`).join("")
+    : '<div class="d">None yet.</div>';
+
+  const label = {queued: "queued", working: "working", skipped: "skipped", no_animal: "no animal", sighting: "sighting",
+                 unavailable: "no media", encrypted: "encrypted", error: "error"};
+  $("events").innerHTML = s.events.length ? s.events.map(e => `
+    <div class="ev"><span class="st ${e.status}">${label[e.status] || e.status}</span>
+      <span class="d"> · ${e.source === "playground" ? "Playground" : "Ring"} · ${esc(e.sub_type)} · ${when(e.ts_ms)}</span><br>
+      <span class="d">${esc(e.detail)}</span></div>`).join("")
+    : '<div class="d">No motion events yet.</div>';
+}
+
+$("feed").addEventListener("click", async ev => {
+  const card = ev.target.closest(".card"); if (!card) return;
+  const x = S.sightings[+card.dataset.i];
+  const fb = ev.target.closest("[data-fb]");
+  if (fb) {
+    await post(`/api/sightings/${x.id}/feedback`, {verdict: x.feedback === fb.dataset.fb ? "none" : fb.dataset.fb});
+    return poll();
+  }
+  $("viewerMedia").innerHTML = x.clip
+    ? `<video src="/media/${esc(x.clip)}" controls autoplay muted playsinline></video>`
+    : `<img src="/media/${esc(x.thumb)}" alt="">`;
+  $("vSpecies").textContent = x.label;
+  $("vSci").textContent = x.scientific;
+  const source = {clip: "clip from Ring", snapshot: "snapshot from Ring", simulated: "simulated clip for a Playground motion event"}[x.media] || "";
+  $("vMeta").innerHTML = `<span>${when(x.ts_ms)} · ${esc(x.device_name)} · ${source}</span><span class="conf">${Math.round(x.score * 100)}% confident</span>`;
+  $("viewer").showModal();
+});
+
+async function poll() {
+  try { render(await (await fetch("/api/state")).json()); }
+  catch (e) { $("status").textContent = "Ring Trail Cam is not running. Start it with: python start.py"; $("status").className = "chip warn"; }
+}
+poll(); setInterval(poll, 3000);
+if (location.search.includes("linked=1")) history.replaceState(null, "", "/");
+</script>
+</body>
+</html>
