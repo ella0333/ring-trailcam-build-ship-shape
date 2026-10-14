@@ -64,6 +64,7 @@ textarea, input { width: 100%; background: var(--bg); color: var(--text); border
 .sci { color: var(--muted); font-style: italic; font-size: 13px; }
 .meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
 .conf { color: var(--accent); font-weight: 600; }
+.second { font-size: 12px; color: var(--muted); margin-top: 4px; }
 .ringtag { display: inline-block; margin-top: 6px; font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
 .fb { display: flex; gap: 6px; margin-top: 10px; }
 .fb button { padding: 4px 10px; font-size: 12px; }
@@ -293,6 +294,7 @@ function render(s) {
         <div class="species">${esc(x.label)}</div>
         <div class="sci">${esc(x.scientific)}</div>
         <div class="meta"><span>${when(x.ts_ms)} · ${esc(x.device_name)}</span><span class="conf">${Math.round(x.score * 100)}%</span></div>
+        ${x.second ? `<div class="second">Second answer: <span class="cap">${esc(x.second)}</span> ${Math.round(x.second_score * 100)}%</div>` : ""}
         ${x.ring_subtype && x.media !== "simulated" ? `<span class="ringtag">Ring detected: ${esc(x.ring_subtype.replace("_", " "))}</span>` : ""}
         <div class="fb">
           <button data-fb="confirmed" class="${x.feedback === "confirmed" ? "on" : ""}">Correct</button>
@@ -328,7 +330,7 @@ $("feed").addEventListener("click", async ev => {
   $("vSpecies").textContent = x.label;
   $("vSci").textContent = x.scientific;
   const source = {clip: "clip from Ring", snapshot: "snapshot from Ring", simulated: "simulated clip for a Playground motion event"}[x.media] || "";
-  $("vMeta").innerHTML = `<span>${when(x.ts_ms)} · ${esc(x.device_name)} · ${source}</span><span class="conf">${Math.round(x.score * 100)}% confident</span>`;
+  $("vMeta").innerHTML = `<span>${when(x.ts_ms)} · ${esc(x.device_name)} · ${source}</span><span class="conf">${Math.round(x.score * 100)}% confident${x.second ? ` · second answer: ${esc(x.second)} ${Math.round(x.second_score * 100)}%` : ""}</span>`;
   $("viewer").showModal();
 });
 

@@ -40,7 +40,9 @@ CREATE TABLE IF NOT EXISTS sightings (
     media       TEXT,                  -- clip, snapshot, or simulated (Playground motion pool)
     source      TEXT,                  -- ring or playground
     ring_subtype TEXT,                 -- Ring's own detection from Event History, e.g. animal
-    feedback    TEXT                   -- confirmed or rejected by the user
+    feedback    TEXT,                  -- confirmed or rejected by the user
+    second      TEXT,                  -- SpeciesNet's second answer, e.g. great blue heron
+    second_score REAL
 );
 """
 
@@ -56,6 +58,11 @@ def _conn() -> sqlite3.Connection:
 with _lock:
     _db = _conn()
     _db.executescript(SCHEMA)
+    # Databases from before a column was added get it here.
+    cols = {r[1] for r in _db.execute("PRAGMA table_info(sightings)")}
+    for col, kind in (("ring_subtype", "TEXT"), ("feedback", "TEXT"), ("second", "TEXT"), ("second_score", "REAL")):
+        if col not in cols:
+            _db.execute(f"ALTER TABLE sightings ADD COLUMN {col} {kind}")
     _db.commit()
 
 

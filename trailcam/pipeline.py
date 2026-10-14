@@ -181,6 +181,7 @@ class Pipeline:
                 ts_ms=job.ts_ms, label=result.label, scientific=result.scientific, score=result.score,
                 clip=clip_rel, thumb=thumb_rel, first_visit=int(first), country=country, state=state or "",
                 media=media, source=job.source, ring_subtype=self.ring_subtype(job),
+                second=result.second, second_score=result.second_score,
             )
             store.set_event(job.request_id, "sighting", f"{result.label} ({result.score:.0%})")
             log.info("sighting: %s %.2f%s", result.label, result.score, " (first visit)" if first else "")

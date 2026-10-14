@@ -41,6 +41,8 @@ class Result:
     score: float = 0.0
     best_frame: Path | None = None
     bbox: list[float] | None = None   # normalized [x, y, w, h] of the animal in best_frame
+    second: str = ""           # the classifier's next answer for the best frame, e.g. "great blue heron"
+    second_score: float = 0.0
     saw_human: bool = False
     frames: list[dict] = field(default_factory=list)
 
@@ -52,6 +54,17 @@ def parse_label(label: str) -> tuple[str, str]:
     genus, species = (parts[4], parts[5]) if len(parts) >= 7 else ("", "")
     scientific = f"{genus} {species}".strip()
     return common, scientific
+
+
+def runner_up(pred: dict, chosen: str) -> tuple[str, float]:
+    """The classifier's best answer other than the one SpeciesNet chose, skipping blank,
+    human and vehicle."""
+    c = pred.get("classifications") or {}
+    for label, score in zip(c.get("classes", []), c.get("scores", [])):
+        name = parse_label(label)[0]
+        if name != chosen and name not in NOT_ANIMALS:
+            return name, float(score)
+    return "", 0.0
 
 
 def sample_frames(clip: Path, out_dir: Path, n: int = FRAMES_PER_CLIP) -> list[Path]:
@@ -126,11 +139,11 @@ class Classifier:
             if best is None or rank > best[0]:
                 animals = [d for d in pred.get("detections", []) if d.get("label") == "animal"]
                 bbox = max(animals, key=lambda d: d.get("conf", 0))["bbox"] if animals else None
-                best = (rank, score, label, common, scientific, Path(pred["filepath"]), bbox)
+                best = (rank, score, label, common, scientific, Path(pred["filepath"]), bbox, runner_up(pred, common))
         if best:
             result.animal = True
             (_, result.score, result.taxon, result.label, result.scientific,
-             result.best_frame, result.bbox) = best
+             result.best_frame, result.bbox, (result.second, result.second_score)) = best
         return result
 
     def classify_clip(self, clip: Path, country: str | None = None, state: str | None = None,
