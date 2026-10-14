@@ -1,10 +1,12 @@
 """Start Ring Trail Cam:  python start.py
+Start with an empty field journal:  python start.py --fresh
 
 The first run creates a .venv folder and installs the packages. The app then runs in the
 background and the dashboard opens in your browser. Stop it with:  python stop.py
 """
 
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -63,7 +65,19 @@ def launch() -> None:
         time.sleep(1)
 
 
+def clear_journal() -> None:
+    """Remove sightings, events and saved clips. Mode, keys and tokens are kept."""
+    (DATA / "trailcam.db").unlink(missing_ok=True)
+    for folder in ("clips", "thumbs"):
+        shutil.rmtree(DATA / folder, ignore_errors=True)
+    print("Cleared the field journal.")
+
+
 def main() -> None:
+    if "--fresh" in sys.argv:
+        if running():
+            sys.exit("Stop Ring Trail Cam first with:  python stop.py")
+        clear_journal()
     if running():
         print(f"Ring Trail Cam is already running at {URL}")
     else:

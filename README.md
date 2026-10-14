@@ -24,6 +24,8 @@ The first run installs what it needs, which takes a few minutes. The dashboard t
 python stop.py
 ```
 
+To start again with an empty field journal, run `python start.py --fresh`. It keeps your setup.
+
 ## Simulation with the Ring Developer Playground
 
 Choose Simulation on the dashboard. It links to the [Ring Developer Playground](https://developer.amazon.com/ring/console/playground), where you sign in, click Generate Token and paste the token into the dashboard. Then press Package, Vehicle or Motion in the Playground, and each event shows up on the dashboard within a few seconds.
