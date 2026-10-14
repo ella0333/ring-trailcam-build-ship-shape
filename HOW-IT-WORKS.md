@@ -17,7 +17,7 @@
 
 A Playground token isn't tied to an app or an account link, so Ring has no webhook to send Playground events to. Ring documents polling Event History as the alternative, so while a Playground token is set the app polls `GET /v1/history/devices/{id}/events` every 5 seconds and reads each event's subtype through the documented `event_types` filters (`motion.human`, `motion.vehicle`, `motion.animal`, `motion.other_motion`). New events go through the same pipeline as webhooks.
 
-The Playground's video is Ring's synthetic doorbell. For generic motion events, the app uses a random clip from `simulation/motion-clips` instead. The pool is unlabeled trail camera footage of animals and people, so SpeciesNet decides what is in each clip, and the card is marked "Simulated clip".
+Every event from the Playground's Motion button uses a random clip from `simulation/motion-clips` instead of the Playground's own video, whatever Ring tagged that video as. Vehicle events are skipped, and Package events use the Playground's own video. The pool is unlabeled trail camera footage of animals and people, so SpeciesNet decides what is in each clip, and the card is marked "Simulated clip".
 
 ## Connecting a Ring camera
 

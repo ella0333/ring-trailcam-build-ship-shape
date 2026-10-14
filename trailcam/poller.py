@@ -50,10 +50,19 @@ class PlaygroundPoller:
                     continue
                 self._seen[device_id].add(e["id"])
                 start = int((e.get("attributes") or {}).get("start", 0))
-                ring_subtype = self.ring.motion_subtype(device_id, e["id"])
+                button = playground_button(self.ring.motion_subtype(device_id, e["id"]))
                 status = self.pipeline.intake(
                     request_id=e["id"], event_id=e["id"], device_id=device_id, account_id="",
-                    ts_ms=start, sub_type=ring_subtype or "motion", component_id=None,
-                    source="playground", ring_subtype=ring_subtype,
+                    ts_ms=start, sub_type=button, component_id=None, source="playground",
                 )
-                log.info("Playground motion event %s (%s): %s", e["id"], ring_subtype or "motion", status)
+                log.info("Playground %s event %s: %s", button, e["id"], status)
+
+
+def playground_button(ring_subtype: str | None) -> str:
+    """Which Playground button made the event. Vehicle keeps Ring's vehicle tag, so it is
+    skipped. Package keeps Ring's package tag if Ring reports one. Everything else is the
+    Motion button, whatever Ring tagged its synthetic video as, and becomes plain motion so
+    the pipeline swaps in a clip from the motion pool."""
+    if ring_subtype and ("vehicle" in ring_subtype or "package" in ring_subtype):
+        return ring_subtype
+    return "motion"
