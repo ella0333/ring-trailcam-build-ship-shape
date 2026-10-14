@@ -32,8 +32,10 @@ THUMBS.mkdir(exist_ok=True)
 # Ring's CV guidelines for a wildlife app: drop what Ring tagged as a person or a vehicle,
 # and send every other value, including ones Ring adds later, on to classification.
 SKIP_SUB_TYPES = {"human", "vehicle"}
-# Generic motion. In Playground simulation these get a clip from the motion pool.
-GENERIC_SUB_TYPES = {"motion", "other_motion"}
+# Playground simulation: Ring tags the Playground's Motion button as "human" (its synthetic
+# doorbell video shows a person). Those events, and generic motion, get a clip from the motion
+# pool instead. Ring's tag describes the Playground's video, not the clip, so it isn't used to skip.
+SWAP_SUB_TYPES = {"human", "motion", "other_motion"}
 
 
 @dataclass
@@ -64,7 +66,8 @@ class Pipeline:
     def intake(self, request_id: str, event_id: str, device_id: str, account_id: str, ts_ms: int,
                sub_type: str, component_id: str | None, source: str, ring_subtype: str | None = None) -> str:
         """One motion event, from a webhook or from Event History. Returns what happened."""
-        skip = sub_type in SKIP_SUB_TYPES
+        swap = source == "playground" and sub_type in SWAP_SUB_TYPES and self.pool()
+        skip = sub_type in SKIP_SUB_TYPES and not swap
         is_new = store.add_event(request_id, event_id, device_id, account_id, ts_ms, sub_type,
                                  "skipped" if skip else "queued", f"Ring tagged it {sub_type}" if skip else "",
                                  source)
@@ -78,10 +81,14 @@ class Pipeline:
     def swap_clip(self, job: Job) -> Path | None:
         """Playground simulation: a Motion event gets a random clip from the motion pool,
         because the Playground's own video is Ring's synthetic doorbell."""
-        if job.source != "playground" or job.sub_type not in GENERIC_SUB_TYPES:
+        if job.source != "playground" or job.sub_type not in SWAP_SUB_TYPES:
             return None
-        pool = sorted(settings.motion_clips.glob("*.mp4")) if settings.motion_clips.is_dir() else []
+        pool = self.pool()
         return random.choice(pool) if pool else None
+
+    @staticmethod
+    def pool() -> list[Path]:
+        return sorted(settings.motion_clips.glob("*.mp4")) if settings.motion_clips.is_dir() else []
 
     def ring_subtype(self, job: Job) -> str | None:
         """Ring's own detection for this event. History ids are opaque, so match on start time."""

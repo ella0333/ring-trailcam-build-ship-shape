@@ -19,3 +19,12 @@ The clips in motion-clips are motion-triggered trail camera recordings from the 
 | clip-13.mp4 | https://archive.org/details/alafia-river-corridor-north-cameras-2026-01-22 (E-06 a/MFDC1227.mp4) |
 | clip-14.mp4 | https://archive.org/details/aldermans-ford-cameras-2025-06-23 (A-07 a/MFDC3133.mp4) |
 | clip-15.mp4 | https://archive.org/details/alafia-river-corridor-north-cameras-2026-01-22 (E-09 a/MFDC0400.mp4) |
+| clip-16.mp4 | https://archive.org/details/alafia-river-corridor-north-cameras-2026-01-22 (E-09 a/MFDC0350.mp4) |
+| clip-17.mp4 | https://archive.org/details/alafia-river-corridor-north-cameras-2026-01-22 (A-11 b/MFDC6982.mp4) |
+| clip-18.mp4 | https://archive.org/details/aldermans-ford-cameras-2025-06-23 (A-10 b/MFDC0677.mp4) |
+| clip-19.mp4 | https://archive.org/details/alafia-river-corridor-north-cameras-2026-01-22 (A-11 b/MFDC6966.mp4) |
+| clip-20.mp4 | https://archive.org/details/alafia-river-corridor-north-cameras-2026-01-22 (E-06 a/MFDC1196.mp4) |
+| clip-21.mp4 | https://archive.org/details/alafia-river-corridor-north-cameras-2026-01-22 (E-06 a/MFDC1403.mp4) |
+| clip-22.mp4 | https://archive.org/details/alafia-river-corridor-north-cameras-2026-01-22 (A-11 b/MFDC6981.mp4) |
+| clip-23.mp4 | https://archive.org/details/alafia-river-corridor-north-cameras-2026-01-22 (E-09 a/MFDC0345.mp4) |
+| clip-24.mp4 | https://archive.org/details/alafia-river-corridor-north-cameras-2026-01-22 (E-09 a/MFDC0357.mp4) |

@@ -293,7 +293,7 @@ function render(s) {
         <div class="species">${esc(x.label)}</div>
         <div class="sci">${esc(x.scientific)}</div>
         <div class="meta"><span>${when(x.ts_ms)} · ${esc(x.device_name)}</span><span class="conf">${Math.round(x.score * 100)}%</span></div>
-        ${x.ring_subtype ? `<span class="ringtag">Ring detected: ${esc(x.ring_subtype.replace("_", " "))}</span>` : ""}
+        ${x.ring_subtype && x.media !== "simulated" ? `<span class="ringtag">Ring detected: ${esc(x.ring_subtype.replace("_", " "))}</span>` : ""}
         <div class="fb">
           <button data-fb="confirmed" class="${x.feedback === "confirmed" ? "on" : ""}">Correct</button>
           <button data-fb="rejected" class="${x.feedback === "rejected" ? "on no" : ""}">Wrong</button>
