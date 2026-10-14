@@ -228,12 +228,29 @@ class RingClient:
         params = {"event_types": event_types} if event_types else None
         return self._json("GET", f"/v1/history/devices/{device_id}/events", params=params).get("data", [])
 
+    # Event History's documented subtype filters, plus the webhook's package_delivery value.
+    # Most specific first: an event can match more than one, and the Playground tags its
+    # synthetic events "human" alongside the real one.
+    SUBTYPES = ("package_delivery", "vehicle", "animal", "human", "other_motion")
+
+    def motion_tags(self, device_id: str, event_id: str) -> list[str]:
+        """Every subtype Ring gives this event. History withholds the subtype, so it can only
+        be read by repeating the query once per event_types filter."""
+        tags = []
+        for sub in self.SUBTYPES:
+            try:
+                found = self.history(device_id, f"motion.{sub}")
+            except RingError as e:  # a filter Ring doesn't accept shouldn't stop the others
+                log.info("Event History filter motion.%s not accepted: %s", sub, e.status)
+                continue
+            if any(e.get("id") == event_id for e in found):
+                tags.append(sub)
+        return tags
+
     def motion_subtype(self, device_id: str, event_id: str) -> str | None:
-        """History withholds the subtype; it can only be read through the event_types filter."""
-        for sub in ("human", "vehicle", "animal", "other_motion"):
-            if any(e.get("id") == event_id for e in self.history(device_id, f"motion.{sub}")):
-                return sub
-        return None
+        """The most specific subtype Ring gives this event."""
+        tags = self.motion_tags(device_id, event_id)
+        return tags[0] if tags else None
 
     # media
     def download_clip(self, device_id: str, ts_ms: int, duration_ms: int, component_id: str | None = None) -> Clip:

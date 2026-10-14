@@ -15,7 +15,7 @@
 
 ## Simulation with the Ring Developer Playground
 
-A Playground token isn't tied to an app or an account link, so Ring has no webhook to send Playground events to. Ring documents polling Event History as the alternative, so while a Playground token is set the app polls `GET /v1/history/devices/{id}/events` every 5 seconds and reads each event's subtype through the documented `event_types` filters (`motion.human`, `motion.vehicle`, `motion.animal`, `motion.other_motion`). New events go through the same pipeline as webhooks.
+A Playground token isn't tied to an app or an account link, so Ring has no webhook to send Playground events to. Ring documents polling Event History as the alternative, so while a Playground token is set the app polls `GET /v1/history/devices/{id}/events` every 5 seconds and reads each event's tags by repeating the query once per `event_types` filter (`motion.package_delivery`, `motion.vehicle`, `motion.animal`, `motion.human`, `motion.other_motion`). An event can carry more than one tag, so a package tag means the Package button and a vehicle tag means the Vehicle button; anything else is the Motion button. The tags Ring gave each event are shown in the Ring events list. New events go through the same pipeline as webhooks.
 
 Every event from the Playground's Motion button uses a random clip from `simulation/motion-clips` instead of the Playground's own video, whatever Ring tagged that video as. Vehicle events are skipped, and Package events use the Playground's own video. The pool is unlabeled trail camera footage of animals and people, so SpeciesNet decides what is in each clip, and the card is marked "Simulated clip".
 

@@ -82,7 +82,13 @@ def add_event(request_id: str, event_id: str, device_id: str, account_id: str, t
 
 
 def set_event(request_id: str, status: str, detail: str = "") -> None:
+    """Update an event's progress. A "Ring tags: ..." note from intake stays on the end."""
     with _lock:
+        row = _db.execute("SELECT detail FROM events WHERE request_id=?", (request_id,)).fetchone()
+        old = (row["detail"] if row else "") or ""
+        if "Ring tags:" in old:
+            tags = old[old.index("Ring tags:"):]
+            detail = f"{detail}. {tags}" if detail else tags
         _db.execute("UPDATE events SET status=?, detail=? WHERE request_id=?", (status, detail, request_id))
         _db.commit()
 

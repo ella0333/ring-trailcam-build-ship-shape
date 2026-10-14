@@ -62,12 +62,15 @@ class Pipeline:
         threading.Thread(target=self.classifier.load, daemon=True).start()
 
     def intake(self, request_id: str, event_id: str, device_id: str, account_id: str, ts_ms: int,
-               sub_type: str, component_id: str | None, source: str, ring_subtype: str | None = None) -> str:
+               sub_type: str, component_id: str | None, source: str, ring_subtype: str | None = None,
+               note: str = "") -> str:
         """One motion event, from a webhook or from Event History. Returns what happened."""
         skip = sub_type in SKIP_SUB_TYPES
+        detail = f"Ring tagged it {sub_type}" if skip else ""
+        if note:
+            detail = f"{detail}. {note}" if detail else note
         is_new = store.add_event(request_id, event_id, device_id, account_id, ts_ms, sub_type,
-                                 "skipped" if skip else "queued", f"Ring tagged it {sub_type}" if skip else "",
-                                 source)
+                                 "skipped" if skip else "queued", detail, source)
         if not is_new:
             return "duplicate"
         if skip:
