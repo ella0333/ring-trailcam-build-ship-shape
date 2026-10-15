@@ -289,6 +289,12 @@ function matches(x) {
   const row = (name, score, top) => `<div class="match${top ? " top" : ""}">
     <span class="name">${esc(name)}</span><span class="pct">${Math.round(score * 100)}%</span>
     <span class="bar"><i style="width:${Math.round(score * 100)}%"></i></span></div>`;
+  let animals = [];
+  try { animals = JSON.parse(x.animals || "[]"); } catch (e) {}
+  if (animals.length > 1) {
+    return `<div class="matches"><span class="cap-title">${animals.length} animals</span>
+      ${animals.map((a, i) => row(`${i + 1}. ${a.label}`, a.score, true)).join("")}</div>`;
+  }
   return `<div class="matches"><span class="cap-title">Species confidence</span>
     ${row(x.label, x.score, true)}${x.second ? row(x.second, x.second_score, false) : ""}</div>`;
 }

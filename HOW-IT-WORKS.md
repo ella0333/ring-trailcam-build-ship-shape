@@ -11,7 +11,7 @@
 
 ## The species model
 
-[SpeciesNet](https://github.com/google/cameratrapai) is Google's open camera trap model (Apache 2.0), trained on about 65 million camera trap images with roughly 2,500 labels. MegaDetector first finds animals, people and vehicles in the frame, and a classifier then names the species from the cropped animal, so Ring's watermark in the corner never reaches the classifier. Given a country and state, SpeciesNet rules out species that don't live there. Ring gives ISO alpha-2 country codes and SpeciesNet expects alpha-3, so the app converts them. When frames disagree, the best species-level answer wins over a genus or family answer.
+[SpeciesNet](https://github.com/google/cameratrapai) is Google's open camera trap model (Apache 2.0), trained on about 65 million camera trap images with roughly 2,500 labels. MegaDetector first finds animals, people and vehicles in the frame, and a classifier then names the species from the cropped animal, so Ring's watermark in the corner never reaches the classifier. Given a country and state, SpeciesNet rules out species that don't live there. Ring gives ISO alpha-2 country codes and SpeciesNet expects alpha-3, so the app converts them. When several animals are in a frame, each one is cropped and classified separately, boxed on the thumbnail and listed on the card, and each species counts toward the species list. SpeciesNet's generic "animal" answer is never shown: the classifier's next most likely animal is used instead. When frames disagree, the frame with the most animals wins, then the best species-level answer.
 
 ## Simulation with the Ring Developer Playground
 

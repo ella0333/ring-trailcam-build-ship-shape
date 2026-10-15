@@ -16,6 +16,8 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
+import json
+
 import cv2
 
 from . import store
@@ -180,9 +182,9 @@ class Pipeline:
                 shutil.move(str(clip_path), CLIPS / f"{stem}.mp4")
                 clip_rel = f"clips/{stem}.mp4"
             thumb_rel = f"thumbs/{stem}.jpg"
-            make_thumb(result.best_frame, result.bbox, THUMBS / f"{stem}.jpg")
+            make_thumb(result.best_frame, result.animals, THUMBS / f"{stem}.jpg")
 
-            first = not store.species_seen(result.label)
+            first = any(not store.species_seen(a["label"]) for a in result.animals)
             store.add_sighting(
                 request_id=job.request_id, device_id=job.device_id, device_name=self.device_name(job.device_id),
                 ts_ms=job.ts_ms, label=result.label, scientific=result.scientific, score=result.score,
@@ -190,6 +192,7 @@ class Pipeline:
                 media=media, source=job.source,
                 ring_subtype=None if job.clip_file else self.ring_subtype(job),
                 second=result.second, second_score=result.second_score,
+                animals=json.dumps([{k: a[k] for k in ("label", "score")} for a in result.animals]),
             )
             store.set_event(job.request_id, "sighting", f"{result.label} ({result.score:.0%})")
             log.info("sighting: %s %.2f%s", result.label, result.score, " (first visit)" if first else "")
@@ -197,16 +200,21 @@ class Pipeline:
             shutil.rmtree(work, ignore_errors=True)
 
 
-def make_thumb(frame: Path, bbox: list[float] | None, out: Path, width: int = 640) -> None:
+def make_thumb(frame: Path, animals: list[dict], out: Path, width: int = 640) -> None:
     img = cv2.imread(str(frame))
     if img is None:
         return
     h, w = img.shape[:2]
-    if bbox:
-        x, y, bw, bh = bbox
-        p1 = (int(x * w), int(y * h))
-        p2 = (int((x + bw) * w), int((y + bh) * h))
-        cv2.rectangle(img, p1, p2, (80, 220, 120), max(2, w // 320))
+    line = max(2, w // 320)
+    for i, a in enumerate(animals):
+        if not a.get("bbox"):
+            continue
+        x, y, bw, bh = a["bbox"]
+        p1, p2 = (int(x * w), int(y * h)), (int((x + bw) * w), int((y + bh) * h))
+        cv2.rectangle(img, p1, p2, (80, 220, 120), line)
+        if len(animals) > 1:
+            cv2.putText(img, str(i + 1), (p1[0] + line * 2, p1[1] + line * 14), cv2.FONT_HERSHEY_SIMPLEX,
+                        line * 0.6, (80, 220, 120), line)
     scale = width / w
     img = cv2.resize(img, (width, int(h * scale)), interpolation=cv2.INTER_AREA)
     ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])

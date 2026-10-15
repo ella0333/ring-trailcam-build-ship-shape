@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import threading
 import time
@@ -42,7 +43,8 @@ CREATE TABLE IF NOT EXISTS sightings (
     ring_subtype TEXT,                 -- Ring's own detection from Event History, e.g. animal
     feedback    TEXT,                  -- confirmed or rejected by the user
     second      TEXT,                  -- SpeciesNet's second answer, e.g. great blue heron
-    second_score REAL
+    second_score REAL,
+    animals     TEXT                   -- JSON list of every animal in the clip
 );
 """
 
@@ -60,7 +62,8 @@ with _lock:
     _db.executescript(SCHEMA)
     # Databases from before a column was added get it here.
     cols = {r[1] for r in _db.execute("PRAGMA table_info(sightings)")}
-    for col, kind in (("ring_subtype", "TEXT"), ("feedback", "TEXT"), ("second", "TEXT"), ("second_score", "REAL")):
+    for col, kind in (("ring_subtype", "TEXT"), ("feedback", "TEXT"), ("second", "TEXT"), ("second_score", "REAL"),
+                      ("animals", "TEXT")):
         if col not in cols:
             _db.execute(f"ALTER TABLE sightings ADD COLUMN {col} {kind}")
     _db.commit()
@@ -87,9 +90,18 @@ def set_event(request_id: str, status: str, detail: str = "") -> None:
         _db.commit()
 
 
+def _labels(row) -> list[str]:
+    try:
+        animals = json.loads(row["animals"] or "[]")
+    except ValueError:
+        animals = []
+    return [a["label"] for a in animals] or [row["label"]]
+
+
 def species_seen(label: str) -> bool:
     with _lock:
-        return _db.execute("SELECT 1 FROM sightings WHERE label=? LIMIT 1", (label,)).fetchone() is not None
+        rows = _db.execute("SELECT label, animals FROM sightings").fetchall()
+    return any(label in _labels(r) for r in rows)
 
 
 def add_sighting(**row) -> int:
@@ -113,12 +125,16 @@ def sightings(limit: int = 200) -> list[dict]:
 
 
 def species_counts() -> list[dict]:
+    """Visits per species. A clip with two species counts once for each."""
     with _lock:
-        rows = _db.execute(
-            "SELECT label, scientific, COUNT(*) AS visits, MIN(ts_ms) AS first_ts, MAX(ts_ms) AS last_ts "
-            "FROM sightings GROUP BY label ORDER BY visits DESC, label"
-        ).fetchall()
-    return [dict(r) for r in rows]
+        rows = _db.execute("SELECT label, scientific, animals, ts_ms FROM sightings").fetchall()
+    counts: dict[str, dict] = {}
+    for r in rows:
+        for label in set(_labels(r)):
+            c = counts.setdefault(label, {"label": label, "visits": 0, "first_ts": r["ts_ms"], "last_ts": r["ts_ms"]})
+            c["visits"] += 1
+            c["first_ts"], c["last_ts"] = min(c["first_ts"], r["ts_ms"]), max(c["last_ts"], r["ts_ms"])
+    return sorted(counts.values(), key=lambda c: (-c["visits"], c["label"]))
 
 
 def events(limit: int = 50) -> list[dict]:
