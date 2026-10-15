@@ -12,6 +12,7 @@ import shutil
 import tempfile
 import threading
 import time
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -40,8 +41,9 @@ class Job:
     ts_ms: int
     sub_type: str
     component_id: str | None
-    source: str        # "ring" (webhook) or "playground" (Event History polling)
+    source: str        # "ring" (webhook), "playground" (Event History) or "simulation" (send_clips.py)
     ring_subtype: str | None = None  # Ring's own detection, read from Event History
+    clip_file: Path | None = None    # a clip from the simulation pool instead of a Ring download
 
 
 class Pipeline:
@@ -58,15 +60,12 @@ class Pipeline:
         threading.Thread(target=self.classifier.load, daemon=True).start()
 
     def intake(self, request_id: str, event_id: str, device_id: str, account_id: str, ts_ms: int,
-               sub_type: str, component_id: str | None, source: str, ring_subtype: str | None = None,
-               note: str = "") -> str:
+               sub_type: str, component_id: str | None, source: str, ring_subtype: str | None = None) -> str:
         """One motion event, from a webhook or from Event History. Returns what happened."""
         skip = sub_type in SKIP_SUB_TYPES
-        detail = f"Ring tagged it {sub_type}" if skip else ""
-        if note:
-            detail = f"{detail}. {note}" if detail else note
         is_new = store.add_event(request_id, event_id, device_id, account_id, ts_ms, sub_type,
-                                 "skipped" if skip else "queued", detail, source)
+                                 "skipped" if skip else "queued", f"Ring tagged it {sub_type}" if skip else "",
+                                 source)
         if not is_new:
             return "duplicate"
         if skip:
@@ -74,13 +73,16 @@ class Pipeline:
         self.q.put(Job(request_id, device_id, ts_ms, sub_type, component_id, source, ring_subtype))
         return "queued"
 
-    def swap_clip(self, job: Job) -> Path | None:
-        """Playground simulation: a Motion event gets a random clip from the motion pool,
-        because the Playground's own video is Ring's synthetic doorbell."""
-        if job.source != "playground" or job.sub_type != "motion":
-            return None
+    def simulate(self, count: int) -> int:
+        """Queue random clips from the simulation pool as motion events (send_clips.py)."""
         pool = self.pool()
-        return random.choice(pool) if pool else None
+        picks = random.sample(pool, min(count, len(pool)))
+        now = int(time.time() * 1000)
+        for clip in picks:
+            request_id = f"sim-{uuid.uuid4().hex[:12]}"
+            store.add_event(request_id, request_id, "simulation", "", now, "motion", "queued", "", "simulation")
+            self.q.put(Job(request_id, "simulation", now, "motion", None, "simulation", clip_file=clip))
+        return len(picks)
 
     @staticmethod
     def pool() -> list[Path]:
@@ -108,6 +110,8 @@ class Pipeline:
                 store.set_event(job.request_id, "error", str(e)[:300])
 
     def device_name(self, device_id: str) -> str:
+        if device_id == "simulation":
+            return "Simulated clip"
         if device_id not in self._device_names:
             try:
                 for d in self.ring.devices():
@@ -117,21 +121,23 @@ class Pipeline:
         return self._device_names.get(device_id, device_id[-12:])
 
     def process(self, job: Job) -> None:
-        if self.ring.is_encrypted(job.device_id):
-            store.set_event(job.request_id, "encrypted", "video is encrypted on this camera, Ring cannot share it")
-            return
-        loc = self.ring.location(job.device_id)
-        country = loc.get("country") or settings.default_country
-        state = loc.get("state") or settings.default_state or None
+        if job.clip_file:
+            country, state = settings.default_country, settings.default_state or None
+        else:
+            if self.ring.is_encrypted(job.device_id):
+                store.set_event(job.request_id, "encrypted", "video is encrypted on this camera, Ring cannot share it")
+                return
+            loc = self.ring.location(job.device_id)
+            country = loc.get("country") or settings.default_country
+            state = loc.get("state") or settings.default_state or None
 
         work = Path(tempfile.mkdtemp(prefix="trailcam_job_"))
         try:
             media = "clip"
             clip_path = work / "clip.mp4"
-            swap = self.swap_clip(job)
-            if swap:
+            if job.clip_file:
                 media = "simulated"
-                shutil.copy(swap, clip_path)
+                shutil.copy(job.clip_file, clip_path)
                 have_clip = True
             else:
                 store.set_event(job.request_id, "working", "waiting for Ring's recording")
@@ -161,7 +167,9 @@ class Pipeline:
                 result = self.classifier.classify_images([snap_path], country, state)
 
             if not result.animal:
-                why = "a person was in frame" if result.saw_human else "no animal in the clip"
+                why = ("a person was in frame" if result.saw_human
+                       else "a vehicle was in frame" if result.saw_vehicle
+                       else "no animal in the clip")
                 kind = "snapshot" if media == "snapshot" else "clip"
                 store.set_event(job.request_id, "no_animal", f"{why}, {kind} deleted")
                 return
@@ -180,7 +188,7 @@ class Pipeline:
                 ts_ms=job.ts_ms, label=result.label, scientific=result.scientific, score=result.score,
                 clip=clip_rel, thumb=thumb_rel, first_visit=int(first), country=country, state=state or "",
                 media=media, source=job.source,
-                ring_subtype=None if media == "simulated" else self.ring_subtype(job),
+                ring_subtype=None if job.clip_file else self.ring_subtype(job),
                 second=result.second, second_score=result.second_score,
             )
             store.set_event(job.request_id, "sighting", f"{result.label} ({result.score:.0%})")

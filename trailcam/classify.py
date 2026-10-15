@@ -44,6 +44,7 @@ class Result:
     second: str = ""           # the classifier's next answer for the best frame, e.g. "great blue heron"
     second_score: float = 0.0
     saw_human: bool = False
+    saw_vehicle: bool = False
     frames: list[dict] = field(default_factory=list)
 
 
@@ -130,6 +131,8 @@ class Classifier:
             result.frames.append({"file": Path(pred["filepath"]).name, "label": common, "score": score})
             if common == "human":
                 result.saw_human = True
+            if common == "vehicle":
+                result.saw_vehicle = True
             if common in NOT_ANIMALS or not label:
                 continue
             # Prefer species-level answers over genus or family rollups.

@@ -32,9 +32,15 @@ To start again with an empty field journal, run `python start.py --fresh`. It ke
 
 Choose Simulation on the dashboard. It links to the [Ring Developer Playground](https://developer.amazon.com/ring/console/playground), where you sign in, click Generate Token and paste the token into the dashboard. Then press Package, Vehicle or Motion in the Playground, and each event shows up on the dashboard within a few seconds.
 
-- **Motion** uses a random clip from `simulation/motion-clips` in place of the Playground's own video, which is Ring's synthetic doorbell. The clips are real trail camera footage of animals and people, with no labels, and SpeciesNet decides what is in each one. These cards are marked "Simulated clip".
-- **Package** is processed with the Playground's own video.
-- **Vehicle** is skipped, because Ring tagged it as a vehicle.
+For each event, the app downloads the Playground's own clip through the Ring API and checks it for animals. Each button plays a different scene, and only clips with an animal in them, such as the bird in the Motion clip, end up in the field journal.
+
+To test with more footage, send random clips from `simulation/motion-clips` while the app is running:
+
+```
+python send_clips.py 3
+```
+
+The clips are real trail camera footage of animals and people, with no labels, and SpeciesNet decides what is in each one. These cards are marked "Simulated clip".
 
 A Playground token lasts about 30 minutes. The dashboard shows the time left and asks for a new token when it runs out.
 

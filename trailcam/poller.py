@@ -50,20 +50,8 @@ class PlaygroundPoller:
                     continue
                 self._seen[device_id].add(e["id"])
                 start = int((e.get("attributes") or {}).get("start", 0))
-                tags = self.ring.motion_tags(device_id, e["id"])
-                button = playground_button(tags)
                 status = self.pipeline.intake(
                     request_id=e["id"], event_id=e["id"], device_id=device_id, account_id="",
-                    ts_ms=start, sub_type=button, component_id=None, source="playground",
-                    note=f"Ring tags on the Playground video: {', '.join(tags) or 'none'}",
+                    ts_ms=start, sub_type="motion", component_id=None, source="playground",
                 )
-                log.info("Playground %s event %s (Ring tags: %s): %s", button, e["id"], tags, status)
-
-
-def playground_button(tags: list[str]) -> str:
-    """Package and Vehicle keep Ring's tag. Everything else is the Motion button."""
-    if "package_delivery" in tags:
-        return "package_delivery"
-    if "vehicle" in tags:
-        return "vehicle"
-    return "motion"
+                log.info("Playground event %s: %s", e["id"], status)

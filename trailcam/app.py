@@ -175,6 +175,15 @@ def devices():
         return JSONResponse({"ok": False, "error": str(e)}, status_code=502)
 
 
+@app.post("/api/simulate")
+def simulate(request: Request, count: int = Form(3)):
+    """Send random clips from the simulation pool through the pipeline (send_clips.py)."""
+    _local_only(request)
+    if not settings.simulation_available:
+        raise HTTPException(404, "no simulation clips in this version")
+    return {"queued": pipeline.simulate(max(1, min(count, 10)))}
+
+
 @app.post("/api/sightings/{sighting_id}/feedback")
 def feedback(request: Request, sighting_id: int, verdict: str = Form(...)):
     """Confirm or reject a label, as Ring's CV guidelines recommend for a best-effort app."""
